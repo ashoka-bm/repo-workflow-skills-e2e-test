@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configure GitHub Workflow"
+  short_description: "Initialize required GitHub workflow state"
+  default_prompt: "Use $configure-github-workflow to initialize and verify this repository GitHub workflow."

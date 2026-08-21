@@ -1,0 +1,8 @@
+{
+  "artifact_sha256": "Replace with the SHA-256 digest of the exact approved artifact",
+  "approved": true,
+  "approved_by": "Replace with the human approver identity",
+  "approved_at": "Replace with an ISO-8601 UTC timestamp",
+  "approval_source_url": "Replace with the GitHub proposal-comment URL",
+  "approval_event_id": "Replace with the immutable GitHub +1 reaction ID"
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Domain Model"
+  short_description: "Place vocabulary and decisions in their owners"
+  default_prompt: "Use $maintain-domain-model to record these resolved terms, boundaries, and architecture decisions in their configured authorities."

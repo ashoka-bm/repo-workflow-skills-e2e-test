@@ -1,0 +1,4 @@
+interface:
+  display_name: "Write Implementation Spec"
+  short_description: "Write and approve an implementation-ready specification"
+  default_prompt: "Use $write-implementation-spec to turn these resolved decisions into an approved implementation specification."
