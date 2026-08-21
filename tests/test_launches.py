@@ -4,7 +4,9 @@ import sys
 import tempfile
 import threading
 import unittest
+import urllib.error
 import urllib.request
+import uuid
 from pathlib import Path
 
 
@@ -143,6 +145,113 @@ class ConfigurationTests(unittest.TestCase):
                 )
 
             self.assertFalse(database.exists())
+
+
+class ResponseMetadataTests(unittest.TestCase):
+    def setUp(self) -> None:
+        from team_launch_planner.config import Config
+        from team_launch_planner.server import create_server
+
+        self.server = create_server(
+            Config(host="127.0.0.1", port=0, database_path=":memory:")
+        )
+        self.thread = threading.Thread(
+            target=self.server.serve_forever, daemon=True
+        )
+        self.thread.start()
+
+    def tearDown(self) -> None:
+        self.server.shutdown()
+        self.thread.join(timeout=2)
+        self.server.server_close()
+
+    def request(self, correlation_id: str | None = None):
+        headers = {}
+        if correlation_id is not None:
+            headers["X-Correlation-ID"] = correlation_id
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.server.server_port}/health",
+            headers=headers,
+        )
+        return urllib.request.urlopen(request, timeout=2)
+
+    def raw_request(self, request: bytes) -> bytes:
+        with socket.create_connection(
+            ("127.0.0.1", self.server.server_port), timeout=2
+        ) as connection:
+            connection.sendall(request)
+            connection.shutdown(socket.SHUT_WR)
+            chunks = []
+            while chunk := connection.recv(4096):
+                chunks.append(chunk)
+        return b"".join(chunks)
+
+    def test_supplied_correlation_identifier_is_preserved(self) -> None:
+        with self.request("client-request-123") as response:
+            self.assertEqual(response.headers["X-API-Version"], "1")
+            self.assertEqual(
+                response.headers["X-Correlation-ID"], "client-request-123"
+            )
+
+    def test_missing_correlation_identifier_is_generated(self) -> None:
+        with self.request() as first, self.request() as second:
+            first_id = first.headers["X-Correlation-ID"]
+            second_id = second.headers["X-Correlation-ID"]
+
+        self.assertEqual(str(uuid.UUID(first_id)), first_id)
+        self.assertEqual(str(uuid.UUID(second_id)), second_id)
+        self.assertNotEqual(first_id, second_id)
+
+    def test_inherited_error_response_includes_mandatory_metadata(self) -> None:
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.server.server_port}/health",
+            data=b"{}",
+            headers={"X-Correlation-ID": "unsupported-method-1"},
+            method="POST",
+        )
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            urllib.request.urlopen(request, timeout=2)
+        response = caught.exception
+        payload = json.load(response)
+        response.close()
+
+        self.assertEqual(response.headers["Content-Type"], "application/json")
+        self.assertEqual(response.headers["X-API-Version"], "1")
+        self.assertEqual(
+            response.headers["X-Correlation-ID"], "unsupported-method-1"
+        )
+        self.assertEqual(payload["error"]["type"], "validation")
+
+    def test_head_response_has_metadata_without_body(self) -> None:
+        response = self.raw_request(
+            b"HEAD /health HTTP/1.1\r\nHost: localhost\r\n"
+            b"X-Correlation-ID: head-method-1\r\nConnection: close\r\n\r\n"
+        )
+        headers, body = response.split(b"\r\n\r\n", 1)
+
+        self.assertIn(b"Content-Type: application/json", headers)
+        self.assertIn(b"X-API-Version: 1", headers)
+        self.assertIn(b"X-Correlation-ID: head-method-1", headers)
+        self.assertEqual(body, b"")
+
+    def test_parser_error_generates_metadata_without_parsed_headers(self) -> None:
+        response = self.raw_request(b"GET / HTTP/9.9\r\n\r\n")
+        headers, body = response.split(b"\r\n\r\n", 1)
+
+        self.assertIn(b"Content-Type: application/json", headers)
+        self.assertIn(b"X-API-Version: 1", headers)
+        self.assertIn(b"X-Correlation-ID:", headers)
+        self.assertEqual(json.loads(body)["error"]["type"], "validation")
+
+    def test_legacy_http_request_is_upgraded_to_a_metadata_response(self) -> None:
+        response = self.raw_request(b"GET /health\r\n")
+        headers, body = response.split(b"\r\n\r\n", 1)
+
+        self.assertTrue(headers.startswith(b"HTTP/1.0 200"))
+        self.assertIn(b"Content-Type: application/json", headers)
+        self.assertIn(b"X-API-Version: 1", headers)
+        self.assertIn(b"X-Correlation-ID:", headers)
+        self.assertEqual(json.loads(body)["status"], "ok")
 
 
 if __name__ == "__main__":

@@ -24,3 +24,10 @@ Startup settings are read before the listener or database is opened:
 
 For example: `TLP_PORT=9000 PYTHONPATH=src python3 -m team_launch_planner`.
 Invalid values stop startup without binding a port or creating the database.
+
+## Response metadata
+
+Every JSON response includes `X-API-Version: 1` and an
+`X-Correlation-ID`. If a client sends `X-Correlation-ID`, the service returns
+that same value; otherwise it generates a UUID for the request. Correlation
+identifiers are diagnostic metadata and must not contain credentials.
