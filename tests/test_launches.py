@@ -1,5 +1,7 @@
 import json
+import os
 import socket
+import subprocess
 import sys
 import tempfile
 import threading
@@ -364,6 +366,42 @@ class ErrorEnvelopeTests(unittest.TestCase):
         self.assertNotIn("private database diagnostic", json.dumps(payload))
         self.assertIn("failed-request-1", "\n".join(logs.output))
         self.assertIn("private database diagnostic", "\n".join(logs.output))
+
+
+class AdministrativeShellTests(unittest.TestCase):
+    def run_admin(self, *arguments: str, cwd: str | None = None):
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = str(ROOT / "src")
+        return subprocess.run(
+            [sys.executable, "-m", "team_launch_planner.admin", *arguments],
+            cwd=cwd or ROOT,
+            env=environment,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    def test_help_lists_reserved_administrative_boundaries(self) -> None:
+        result = self.run_admin("--help")
+
+        self.assertEqual(result.returncode, 0)
+        for command in ("migrate", "tokens", "export", "backup"):
+            self.assertIn(command, result.stdout)
+
+    def test_subcommand_help_parses_without_running_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_admin("migrate", "--help", cwd=directory)
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(list(Path(directory).iterdir()), [])
+
+    def test_unknown_command_fails_safely(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_admin("destroy-everything", cwd=directory)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("invalid choice", result.stderr)
+            self.assertEqual(list(Path(directory).iterdir()), [])
 
 
 if __name__ == "__main__":

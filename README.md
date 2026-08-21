@@ -45,3 +45,16 @@ The stable categories are `validation` (400), `missing` (404), `conflict`
 the generic message `Internal server error`; stack traces and private diagnostic
 details are never returned to clients. The server logs the private diagnostic
 with the same correlation identifier for operators.
+
+## Administrative shell
+
+Discover the administrative boundary with:
+
+```bash
+PYTHONPATH=src python3 -m team_launch_planner.admin --help
+```
+
+The shell reserves `migrate`, `tokens`, `export`, and `backup` for later
+batches. Each supports `--help`; invoking an unimplemented or unknown command
+exits with code 2 and performs no mutation. Successful commands will use exit
+code 0, invalid input will use 2, and runtime failures will use 1.
