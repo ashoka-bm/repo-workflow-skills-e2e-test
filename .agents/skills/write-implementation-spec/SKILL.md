@@ -1,6 +1,6 @@
 ---
 name: write-implementation-spec
-description: Write and durably approve an implementation-ready specification after planning decisions are resolved. Use after a direct, understood request or a completed plan-new-work map and before plan-implementation-tickets; requires testable outcomes, proof, scope, documentation and operational impact, and no open decisions.
+description: Write and obtain active-conversation approval for an implementation-ready specification after planning decisions are resolved. Use after a direct, understood request or a completed plan-new-work map and before plan-implementation-tickets; requires testable outcomes, proof, scope, documentation and operational impact, and no open decisions.
 ---
 
 # Write Implementation Spec
@@ -36,29 +36,17 @@ look complete.
 
 ## Approve the exact specification
 
-Present the complete specification before publication. Approval applies only to
-the exact specification bytes presented. Post the artifact and its computed
-UTF-8 artifact in one comment using the canonical byte-length, artifact-text,
-and SHA-256 shape in `WORKFLOW.md`. The human approves by adding GitHub's `+1`
-reaction to that exact comment. Re-read the comment and reaction through GitHub's
-authenticated API and record the reaction actor, UTC time, proposal URL, and
-immutable reaction ID. Validate the record and observation with:
+Present the complete specification in the active conversation before
+publication and explicitly ask the human to approve or reject it. Approval
+applies only to the exact content presented in that request. Do not infer
+approval from silence, a prior artifact, a GitHub label, or an earlier
+conversation. Continue only when the human explicitly approves it.
 
-```bash
-python3 .workflow/scripts/validate_approval.py <specification> <approval.json> <approval-observation.json>
-```
-
-The human only needs to approve or reject the exact artifact presented. They
-are never required to calculate, copy, or type the digest, approver identity,
-or timestamp. The agent or integration handling approval computes the digest
-and records the event evidence returned by GitHub. If durable identity, time,
-source, or event ID is unavailable, fail closed; do not ask the human to supply
-approval metadata. Ask for ordinary approval only.
-
-Any content change invalidates approval and requires another review. Do not
-infer approval from silence or from approval of a prior version. The validator
-binds the record to the GitHub observation; the authenticated API query supplies
-the event evidence.
+Any content change invalidates the approval and requires another review. If the
+work resumes in a new conversation and the exact approval is not present in the
+active conversation, present the specification and ask for approval again.
+GitHub stores the approved specification for traceability; it is not an
+additional approval interface.
 
 ## Publish and stop
 
@@ -66,9 +54,8 @@ Before publishing, confirm the `PLAN` label and required GitHub setup
 exist under `docs/agents/github-setup.md`; otherwise use
 `configure-github-workflow`.
 
-After validation, publish or update the specification as a GitHub Issue with
-the `PLAN` label and preserve the approval record and observation in a
-GitHub comment.
+After approval, publish or update the specification as a GitHub Issue with the
+`PLAN` label.
 Do not apply `ready-for-agent`: implementation readiness belongs to landing
 batches and is derived later.
 

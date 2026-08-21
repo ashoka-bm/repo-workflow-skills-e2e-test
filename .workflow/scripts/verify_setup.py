@@ -12,8 +12,13 @@ from typing import Any
 
 
 MANIFEST = Path(".workflow/installation.json")
+# OS metadata files that file managers drop into working copies; never
+# workflow content, so their presence is not an unmanaged-file error.
+OS_NOISE_FILES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 ALLOWED_CUSTOMIZABLE = {
+    ".mergify.yml",
     ".github/workflows/landing-ci.yml",
+    ".workflow/github-state-config.json",
     "AGENTS.md",
     "docs/agents/domain.md",
 }
@@ -25,15 +30,10 @@ REQUIRED_CONFIGURED_FIELDS = (
     "- **Primary users or outcomes:**",
     "- Intended product or architecture authority:",
     "- Current implementation and adoption evidence:",
-    "- Claim coordinator:",
-    "- Claim request channel:",
-    "- Claim heartbeat channel:",
-    "- Stale-claim duration:",
-    "- Recovery-grace duration:",
+    "- Workflow maintainers:",
     "- Base branch:",
     "- Workflow Project:",
     "- Required status checks:",
-    "- Durable approval channel:",
     "- Environment setup:",
     "- Focused tests:",
     "- Full local test gate:",
@@ -166,6 +166,7 @@ def installation_errors(target: Path) -> tuple[list[str], set[str]]:
                 path.is_file()
                 and path.suffix != ".pyc"
                 and "__pycache__" not in path.parts
+                and path.name not in OS_NOISE_FILES
                 and path.relative_to(target).as_posix() not in known_paths
             ):
                 errors.append(f"UNMANAGED FILE: {path.relative_to(target).as_posix()}")
@@ -224,8 +225,10 @@ def configuration_errors(
                 errors.append(f"UNRESOLVED PLACEHOLDER: {relative}")
 
     orientation = target / "AGENTS.md"
+    agent_lines: list[str] = []
     if orientation.is_file():
         text = orientation.read_text(encoding="utf-8")
+        agent_lines = text.splitlines()
         required_fields = tuple(
             field
             for field in REQUIRED_CONFIGURED_FIELDS
@@ -235,6 +238,70 @@ def configuration_errors(
         for fragment in REQUIRED_AGENT_ROUTES:
             if fragment not in text:
                 errors.append(f"MISSING REQUIRED AGENTS CONTRACT: {fragment}")
+
+    state_path = target / ".workflow" / "github-state-config.json"
+    if not pre_github:
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            errors.append(f"INVALID GITHUB STATE CONFIG: {error}")
+            state = None
+        if not isinstance(state, dict):
+            errors.append("INVALID GITHUB STATE CONFIG: root must be an object")
+        else:
+            repository = state.get("repository")
+            if (
+                not isinstance(repository, str)
+                or re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository)
+                is None
+            ):
+                errors.append("UNCONFIGURED GITHUB STATE: repository")
+            project_id = state.get("project_id")
+            if (
+                not isinstance(project_id, str)
+                or not project_id
+                or project_id == "Pending GitHub setup"
+            ):
+                errors.append("UNCONFIGURED GITHUB STATE: project_id")
+            project_fields = state.get("project_fields")
+            if (
+                not isinstance(project_fields, dict)
+                or project_fields.get("lifecycle") != "Lifecycle"
+            ):
+                errors.append("UNCONFIGURED GITHUB STATE: project_fields.lifecycle")
+            maintainers = state.get("authorized_maintainers")
+            if not isinstance(maintainers, list) or not maintainers or not all(
+                isinstance(value, str)
+                and value
+                and value != "Pending GitHub setup"
+                for value in maintainers
+            ):
+                errors.append("UNCONFIGURED GITHUB STATE: authorized_maintainers")
+            configured_maintainers = next(
+                (
+                    line.removeprefix("- Workflow maintainers:").strip().strip("`")
+                    for line in agent_lines
+                    if line.startswith("- Workflow maintainers:")
+                ),
+                None,
+            )
+            if (
+                isinstance(maintainers, list)
+                and configured_maintainers not in maintainers
+            ):
+                errors.append(
+                    "GITHUB STATE authorized_maintainers do not match AGENTS.md"
+                )
+            configured_base = next(
+                (
+                    line.removeprefix("- Base branch:").strip().strip("`")
+                    for line in agent_lines
+                    if line.startswith("- Base branch:")
+                ),
+                None,
+            )
+            if state.get("base_branch") != configured_base:
+                errors.append("GITHUB STATE base_branch does not match AGENTS.md")
 
     domain = target / "docs" / "agents" / "domain.md"
     if domain.is_file():

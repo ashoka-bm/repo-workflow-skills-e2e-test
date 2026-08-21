@@ -25,7 +25,7 @@ Present the proposed values in plain language before editing. Resolve:
 
 1. the repository identity, purpose, users, governing authority, evidence,
    commands, base branch, intended workflow Project, required status checks,
-   durable GitHub approval channel, and coordination fields in `AGENTS.md`;
+   and workflow maintainers in `AGENTS.md`;
 2. whether the domain layout is `single-context` or `multi-context`;
 3. the vocabulary entry point and context-document path, explicit paths, or
    pattern;

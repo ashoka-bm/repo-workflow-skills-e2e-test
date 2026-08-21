@@ -1,6 +1,6 @@
 <!--
-Keep this pull request in draft until its FIFO landing turn and the
-ready-for-review gate in GITHUB-WORKFLOW.md is complete.
+Keep this pull request in draft until the ready-for-review gate in
+GITHUB-WORKFLOW.md is complete. Queue it through queue_landing.py.
 -->
 
 ## Problem addressed
@@ -17,9 +17,9 @@ ready-for-review gate in GITHUB-WORKFLOW.md is complete.
 - Landing batch:
 - Child issues:
 
-## Acceptance criteria and proof
+## Acceptance criteria and verification
 
-- [ ] `<criterion>` — Proof: `<test or verification>`
+- [ ] `<criterion>` — Verification: `<test or check>`
 
 ## Dependencies and exclusions
 
@@ -31,7 +31,7 @@ ready-for-review gate in GITHUB-WORKFLOW.md is complete.
 - Candidate commit:
 - Focused tests:
 - Full local gate:
-- Another-agent review:
+- Independent review:
 - P0/P1 blockers: `none` or `<finding IDs and status>`
 - Deferred findings needing triage: `none` or `<finding IDs>`
 - Deferred-findings register: `none` or `<parent-plan register URL>`

@@ -41,8 +41,8 @@ Then use this order:
 3. **Batch boundary, for landing batches** — confirm the work is bounded for
    one owner and justify each split with a safety, flow, recovery, or review
    reason.
-4. **Parent and dependencies** — the plan and batch, local prerequisites within
-   that batch, and true landing prerequisites between batches.
+4. **Parent and dependencies** — the plan and batch, local prerequisites between
+   slices, and true landing prerequisites between batches.
 5. **Starting context, when needed** — the smallest paths, contracts, or
    conventions needed to begin without rediscovery.
 6. **Acceptance and proof** — one proving method for every criterion.
@@ -68,11 +68,15 @@ Complete a semantic review before publication. Confirm that:
 - a reader can understand the impact without knowing the implementation;
 - the title promises no unapproved or unverified result;
 - the first paragraph explains the problem instead of listing edits;
-- every acceptance criterion has an explicit proof;
-- tests and documentation required by implementation stay in the same
-  implementation ticket rather than separate completion tickets;
-- `local_after` never crosses a batch, `lands_after` names only a true landing
-  prerequisite, and conflict surfaces explain unsafe parallelism; and
+- every acceptance criterion has explicit proof that follows the [test-quality
+  and same-ticket rules](../../../../LOCAL-WORK.md#proof-and-documentation-policy),
+  including stable-boundary proof, coverage reuse, and shared proof where
+  sufficient;
+- every cross-batch `local_after` is backed by downstream `lands_after` and
+  reciprocal `safe_parallel_with`, `lands_after` names only a true landing
+  prerequisite, every `starts_after` is a direct `lands_after` edge whose merge
+  is required before downstream implementation can begin, and conflict surfaces
+  explain unsafe parallelism; and
 - every separate batch has a documented safety, flow, recovery, or review
   reason; and
 - status, ownership, queue, readiness, and review metadata are absent from the

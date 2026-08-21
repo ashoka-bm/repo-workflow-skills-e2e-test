@@ -20,10 +20,11 @@
 - Work stream: <stream name or identifier>
 - Child tickets: <sub-issue links>
 - Lands after: <native batch dependency plus why that batch must merge first, or none>
+- Starts after: <direct `lands_after` batches that must merge before this batch can be claimed or built, plus why, or none>
 
 ## Local execution
 
-- Starting slices: <child tickets with no `local_after` prerequisite>
+- Starting slices: <after all `starts_after` gates resolve, child tickets with no prerequisite or with a cross-batch prerequisite checkpoint that provides the stacked base>
 - Unlock rule: <Each reviewed `slice-checkpoint` makes its direct local dependants executable.>
 
 ## Acceptance and proof
@@ -40,7 +41,7 @@
 
 - Conflict surfaces: <shared files, contracts, schemas, migrations, or resources>
 - Safe to run in parallel with: <batch links and why, or none>
-- Must not overlap: <batch links and why, or none>
+- Must not overlap: <links to other landing batches in this Project and why, or none>
 
 ## Documentation and operations
 
