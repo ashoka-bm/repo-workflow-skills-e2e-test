@@ -8,6 +8,7 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -252,6 +253,117 @@ class ResponseMetadataTests(unittest.TestCase):
         self.assertIn(b"X-API-Version: 1", headers)
         self.assertIn(b"X-Correlation-ID:", headers)
         self.assertEqual(json.loads(body)["status"], "ok")
+
+
+class ErrorEnvelopeTests(unittest.TestCase):
+    def test_known_failures_share_one_correlated_envelope(self) -> None:
+        from team_launch_planner.errors import ApiError, error_response
+
+        cases = {
+            "validation": 400,
+            "missing": 404,
+            "conflict": 409,
+            "authorization": 403,
+            "internal": 500,
+        }
+        for category, expected_status in cases.items():
+            with self.subTest(category=category):
+                status, payload = error_response(
+                    ApiError(category, f"{category} detail"), "request-7"
+                )
+                self.assertEqual(status, expected_status)
+                self.assertEqual(
+                    payload,
+                    {
+                        "error": {
+                            "correlation_id": "request-7",
+                            "message": f"{category} detail",
+                            "type": category,
+                        }
+                    },
+                )
+
+    def test_unexpected_failure_does_not_expose_diagnostics(self) -> None:
+        from team_launch_planner.errors import error_response
+
+        with self.assertLogs("team_launch_planner.errors", level="ERROR") as logs:
+            status, payload = error_response(
+                RuntimeError("secret stack detail"), "request-8"
+            )
+
+        self.assertEqual(status, 500)
+        self.assertNotIn("secret", json.dumps(payload))
+        self.assertEqual(payload["error"]["type"], "internal")
+        self.assertIn("request-8", "\n".join(logs.output))
+        self.assertIn("secret stack detail", "\n".join(logs.output))
+
+    def test_missing_route_returns_json_with_response_metadata(self) -> None:
+        from team_launch_planner.config import Config
+        from team_launch_planner.server import create_server
+
+        server = create_server(
+            Config(host="127.0.0.1", port=0, database_path=":memory:")
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{server.server_port}/missing",
+                headers={"X-Correlation-ID": "missing-route-1"},
+            )
+            with self.assertRaises(urllib.error.HTTPError) as caught:
+                urllib.request.urlopen(request, timeout=2)
+            response = caught.exception
+            payload = json.load(response)
+            response.close()
+        finally:
+            server.shutdown()
+            thread.join(timeout=2)
+            server.server_close()
+
+        self.assertEqual(response.code, 404)
+        self.assertEqual(response.headers["Content-Type"], "application/json")
+        self.assertEqual(response.headers["X-API-Version"], "1")
+        self.assertEqual(response.headers["X-Correlation-ID"], "missing-route-1")
+        self.assertEqual(payload["error"]["type"], "missing")
+
+    def test_internal_request_failure_is_logged_but_not_returned(self) -> None:
+        from team_launch_planner.config import Config
+        from team_launch_planner.server import create_server
+
+        server = create_server(
+            Config(host="127.0.0.1", port=0, database_path=":memory:")
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{server.server_port}/health",
+                headers={"X-Correlation-ID": "failed-request-1"},
+            )
+            with (
+                patch(
+                    "team_launch_planner.server._database_available",
+                    side_effect=RuntimeError("private database diagnostic"),
+                ),
+                self.assertLogs(
+                    "team_launch_planner.errors", level="ERROR"
+                ) as logs,
+                self.assertRaises(urllib.error.HTTPError) as caught,
+            ):
+                urllib.request.urlopen(request, timeout=2)
+            response = caught.exception
+            payload = json.load(response)
+            response.close()
+        finally:
+            server.shutdown()
+            thread.join(timeout=2)
+            server.server_close()
+
+        self.assertEqual(response.code, 500)
+        self.assertNotIn("private database diagnostic", json.dumps(payload))
+        self.assertIn("failed-request-1", "\n".join(logs.output))
+        self.assertIn("private database diagnostic", "\n".join(logs.output))
 
 
 if __name__ == "__main__":

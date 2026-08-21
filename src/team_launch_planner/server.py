@@ -7,6 +7,7 @@ from pathlib import Path
 
 from . import __version__
 from .config import Config, ConfigurationError
+from .errors import ApiError, error_response
 
 
 class LaunchServer(ThreadingHTTPServer):
@@ -67,35 +68,41 @@ class RequestHandler(BaseHTTPRequestHandler):
         message: str | None = None,
         explain: str | None = None,
     ) -> None:
-        category = "missing" if code == 404 else "validation"
+        if code == 404:
+            category = "missing"
+        elif code == 403:
+            category = "authorization"
+        elif code == 409:
+            category = "conflict"
+        elif code < 500 or code in {501, 505}:
+            category = "validation"
+        else:
+            category = "internal"
         public_message = message or self.responses.get(
             code, ("Request failed", "")
         )[0]
-        self.send_json(
-            code if code < 500 else 400,
-            {
-                "error": {
-                    "correlation_id": self.correlation_id,
-                    "message": public_message,
-                    "type": category,
-                }
-            },
+        status, payload = error_response(
+            ApiError(category, public_message), self.correlation_id
         )
+        self.send_json(status, payload)
 
     def do_GET(self) -> None:
-        if self.path != "/health":
-            self.send_error(404)
-            return
-        payload = {
-            "database": (
-                "available"
-                if _database_available(self.server.config.database_path)
-                else "unavailable"
-            ),
-            "status": "ok",
-            "version": __version__,
-        }
-        self.send_json(200, payload)
+        try:
+            if self.path != "/health":
+                raise ApiError("missing", "Route not found")
+            payload = {
+                "database": (
+                    "available"
+                    if _database_available(self.server.config.database_path)
+                    else "unavailable"
+                ),
+                "status": "ok",
+                "version": __version__,
+            }
+            self.send_json(200, payload)
+        except Exception as error:
+            status, payload = error_response(error, self.correlation_id)
+            self.send_json(status, payload)
 
     def log_message(self, format: str, *args: object) -> None:
         return

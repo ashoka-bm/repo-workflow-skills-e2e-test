@@ -31,3 +31,17 @@ Every JSON response includes `X-API-Version: 1` and an
 `X-Correlation-ID`. If a client sends `X-Correlation-ID`, the service returns
 that same value; otherwise it generates a UUID for the request. Correlation
 identifiers are diagnostic metadata and must not contain credentials.
+
+## Error contract
+
+Failures use one JSON shape:
+
+```json
+{"error":{"correlation_id":"request-id","message":"Route not found","type":"missing"}}
+```
+
+The stable categories are `validation` (400), `missing` (404), `conflict`
+(409), `authorization` (403), and `internal` (500). Unexpected failures return
+the generic message `Internal server error`; stack traces and private diagnostic
+details are never returned to clients. The server logs the private diagnostic
+with the same correlation identifier for operators.
