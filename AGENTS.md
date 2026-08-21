@@ -61,8 +61,8 @@ These terms have fixed meanings in every workflow document:
 - Stale-claim duration: 24 hours
 - Recovery-grace duration: 4 hours
 - Base branch: `main`
-- Workflow Project: `Pending GitHub setup`
-- Required status checks: `Pending GitHub setup`
+- Workflow Project: `https://github.com/users/ashoka-bm/projects/2`
+- Required status checks: `landing-gate`
 - Durable approval channel: GitHub issue comments approved with a `+1` reaction
 
 Governing specifications describe intended behavior; code, tests,
