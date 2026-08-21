@@ -203,7 +203,7 @@ List only commands that genuinely apply:
 - Focused tests: `python3 -m unittest discover -p 'test_launches.py'`
 - Full local test gate: `python3 -m unittest discover`
 - Build or type-check: `python3 -m compileall .`
-- Lint or static checks: None configured
+- Lint or static checks: None
 
 ## Repository roots
 
