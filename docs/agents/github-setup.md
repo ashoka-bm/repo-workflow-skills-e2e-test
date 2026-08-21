@@ -19,7 +19,7 @@ Wayfinder or another globally installed planning skill.
 
 ## Delivery labels
 
-- `workflow:plan`, `workflow:batch`, and `workflow:ticket` identify artifact
+- `PLAN`, `BATCH`, and `TICKET` identify artifact
   type only.
 - `surface:*` labels identify the controlled conflict surfaces listed in the
   machine-readable contract.

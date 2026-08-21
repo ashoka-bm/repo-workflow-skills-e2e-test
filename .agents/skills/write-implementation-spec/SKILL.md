@@ -62,12 +62,12 @@ the event evidence.
 
 ## Publish and stop
 
-Before publishing, confirm the `workflow:plan` label and required GitHub setup
+Before publishing, confirm the `PLAN` label and required GitHub setup
 exist under `docs/agents/github-setup.md`; otherwise use
 `configure-github-workflow`.
 
 After validation, publish or update the specification as a GitHub Issue with
-the `workflow:plan` label and preserve the approval record and observation in a
+the `PLAN` label and preserve the approval record and observation in a
 GitHub comment.
 Do not apply `ready-for-agent`: implementation readiness belongs to landing
 batches and is derived later.
