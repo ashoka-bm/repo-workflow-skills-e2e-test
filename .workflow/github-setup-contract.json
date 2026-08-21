@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "project_identity_required": true,
+  "labels": [
+    {"name": "bug", "meaning": "Existing behavior is broken."},
+    {"name": "enhancement", "meaning": "New capability or improvement."},
+    {"name": "planning:map", "meaning": "Parent map for unresolved new-work planning."},
+    {"name": "planning:research", "meaning": "Evidence-gathering question with an externally verifiable answer."},
+    {"name": "planning:prototype", "meaning": "Disposable experiment that reduces a named uncertainty."},
+    {"name": "planning:decision", "meaning": "Product, architecture, ownership, or operational choice requiring an authority."},
+    {"name": "planning:task", "meaning": "Planning-stage documentation or synthesis that does not implement product behavior."},
+    {"name": "workflow:plan", "meaning": "Approved implementation specification or its parent plan."},
+    {"name": "workflow:batch", "meaning": "Exclusive landing batch and claim unit."},
+    {"name": "workflow:ticket", "meaning": "Child implementation slice."},
+    {"name": "workflow:needs-human-review", "meaning": "Landing batch remains blocked after five review passes and requires human re-scope or redesign."},
+    {"name": "surface:schema", "meaning": "Shared schema or migration conflict surface."},
+    {"name": "surface:authentication", "meaning": "Shared authentication or authorization conflict surface."},
+    {"name": "surface:routing", "meaning": "Shared routing conflict surface."},
+    {"name": "surface:dependencies", "meaning": "Shared dependency manifest or lockfile conflict surface."},
+    {"name": "surface:generated-files", "meaning": "Shared generated-artifact conflict surface."},
+    {"name": "surface:shared-contract", "meaning": "Shared API or cross-context contract conflict surface."},
+    {"name": "surface:deployment", "meaning": "Shared deployment resource or slot conflict surface."},
+    {"name": "triage:needs-triage", "meaning": "Intake requires maintainer evaluation."},
+    {"name": "triage:needs-info", "meaning": "Intake is waiting for reporter information."},
+    {"name": "triage:ready-for-agent", "meaning": "Intake is defined enough for its next agent-owned stage."},
+    {"name": "triage:ready-for-human", "meaning": "Intake requires human judgment or action."},
+    {"name": "triage:wontfix", "meaning": "Intake will not be actioned."}
+  ],
+  "project_fields": {
+    "Work stream": {"type": "text"},
+    "Queue sequence": {"type": "number"},
+    "Lifecycle": {
+      "type": "single_select",
+      "options": ["Planned", "Building", "Locally complete", "Waiting to land", "In PR", "Landed"]
+    }
+  },
+  "repository": {
+    "native_issue_hierarchy_enabled": true,
+    "native_issue_dependencies_enabled": true,
+    "base_branch_ruleset_targets_configured_base": true,
+    "pull_requests_required": true,
+    "branch_must_be_up_to_date": true,
+    "review_conversations_resolved": true,
+    "force_pushes_blocked": true,
+    "deletions_blocked": true,
+    "administrators_included": true,
+    "merge_queue_disabled": true,
+    "draft_expensive_ci_disabled": true,
+    "ready_for_review_ci_enabled": true,
+    "non_draft_sync_ci_enabled": true
+  },
+  "required_non_empty_repository_lists": [
+    "required_status_checks",
+    "full_gate_commands"
+  ]
+}

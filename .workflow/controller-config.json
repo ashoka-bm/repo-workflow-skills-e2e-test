@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "mode": "audit",
+  "enforcement_enabled": false,
+  "repository": "Pending GitHub setup",
+  "base_branch": "Pending GitHub setup",
+  "project_id": "Pending GitHub setup",
+  "project_fields": {
+    "lifecycle": "Lifecycle",
+    "queue_sequence": "Queue sequence"
+  },
+  "merge_method": "Pending GitHub setup",
+  "landing_record_location": "pull_request_comments",
+  "authorized_coordinators": ["Pending GitHub setup"],
+  "required_status_checks": [],
+  "reconciliation_minutes": 15,
+  "app_client_id_variable": "WORKFLOW_APP_CLIENT_ID",
+  "app_private_key_secret": "WORKFLOW_APP_PRIVATE_KEY"
+}

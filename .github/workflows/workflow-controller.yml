@@ -1,0 +1,97 @@
+name: Repository workflow controller (audit)
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - converted_to_draft
+      - auto_merge_enabled
+      - auto_merge_disabled
+      - closed
+  issues:
+    types: [assigned, unassigned, closed, reopened]
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+
+concurrency:
+  group: repository-workflow-controller
+  queue: max
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  actions: read
+  checks: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted controller code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Validate controller configuration
+        id: configuration
+        shell: bash
+        run: |
+          python3 .workflow/controller.py validate-config \
+            --config .workflow/controller-config.json
+          configured=$(python3 -c 'import json; c=json.load(open(".workflow/controller-config.json")); values=[c.get(k) for k in ("repository", "base_branch", "project_id", "merge_method")]+c.get("authorized_coordinators", []); print(str(bool(values) and all(v != "Pending GitHub setup" for v in values)).lower())')
+          echo "configured=$configured" >> "$GITHUB_OUTPUT"
+
+      - name: Report pending audit connection
+        if: steps.configuration.outputs.configured != 'true'
+        shell: bash
+        run: |
+          echo '## Repository workflow controller' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Audit mode is safe, but GitHub identity and Project configuration are still pending.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create short-lived GitHub App token
+        if: steps.configuration.outputs.configured == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.WORKFLOW_APP_CLIENT_ID }}
+          private-key: ${{ secrets.WORKFLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Read authoritative GitHub state
+        if: steps.configuration.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          mkdir -p .tmp/controller
+          python3 .workflow/github_snapshot.py collect \
+            --config .workflow/controller-config.json \
+            --output .tmp/controller/snapshot.json
+          python3 .workflow/github_snapshot.py event \
+            --event-name "$GITHUB_EVENT_NAME" \
+            --event-id "$GITHUB_RUN_ID-attempt-$GITHUB_RUN_ATTEMPT" \
+            --github-event "$GITHUB_EVENT_PATH" \
+            --output .tmp/controller/event.json
+
+      - name: Compute audit plan without applying it
+        if: steps.configuration.outputs.configured == 'true'
+        shell: bash
+        run: |
+          python3 .workflow/controller.py plan \
+            --snapshot .tmp/controller/snapshot.json \
+            --event .tmp/controller/event.json \
+            | tee .tmp/controller/plan.json
+          echo '## Repository workflow controller audit' >> "$GITHUB_STEP_SUMMARY"
+          echo 'The following changes were proposed. Audit mode did not apply them.' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat .tmp/controller/plan.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

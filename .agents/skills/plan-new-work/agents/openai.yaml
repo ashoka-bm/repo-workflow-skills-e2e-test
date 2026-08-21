@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan New Work"
+  short_description: "Resolve uncertainty before implementation planning"
+  default_prompt: "Use $plan-new-work to turn this uncertain effort into resolved planning decisions for an implementation specification."

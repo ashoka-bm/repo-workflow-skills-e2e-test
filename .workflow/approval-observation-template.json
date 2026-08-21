@@ -1,0 +1,8 @@
+{
+  "source_url": "Replace with the GitHub proposal-comment URL",
+  "event_id": "Replace with the immutable GitHub +1 reaction ID",
+  "actor": "Replace with the actor returned by GitHub",
+  "occurred_at": "Replace with the UTC event time returned by GitHub",
+  "decision": "approved",
+  "artifact_sha256": "Replace with the SHA-256 digest bound to the approval proposal"
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Implementation Tickets"
+  short_description: "Plan approved work into safe landing batches"
+  default_prompt: "Use $plan-implementation-tickets to turn this approved specification into dependency-aware implementation tickets."

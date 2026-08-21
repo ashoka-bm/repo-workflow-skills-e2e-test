@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configure Repository Workflow"
+  short_description: "Configure workflow and domain authority routes"
+  default_prompt: "Use $configure-repository-workflow to configure this repository workflow and its domain-document routes."
