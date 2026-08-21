@@ -2,9 +2,10 @@ import json
 import sqlite3
 from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 from . import __version__
-from .config import Config
+from .config import Config, ConfigurationError
 
 
 class LaunchServer(ThreadingHTTPServer):
@@ -18,6 +19,18 @@ def _database_available(path: str) -> bool:
     except sqlite3.Error:
         return False
     return True
+
+
+def _database_path_is_usable(path: str) -> bool:
+    database = None if path == ":memory:" else Path(path)
+    existed = database is not None and database.exists()
+    available = _database_available(path)
+    if database is not None and not existed and database.exists():
+        try:
+            database.unlink()
+        except OSError:
+            return False
+    return available
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -48,6 +61,18 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 
 def create_server(config: Config) -> LaunchServer:
+    config.validate()
+    if not _database_path_is_usable(config.database_path):
+        raise ConfigurationError("TLP_DATABASE_PATH is not usable by SQLite")
     server = LaunchServer((config.host, config.port), RequestHandler)
+    database = (
+        None if config.database_path == ":memory:" else Path(config.database_path)
+    )
+    database_existed = database is not None and database.exists()
+    if not _database_available(config.database_path):
+        server.server_close()
+        if database is not None and not database_existed and database.exists():
+            database.unlink()
+        raise ConfigurationError("TLP_DATABASE_PATH is not usable by SQLite")
     server.config = config
     return server

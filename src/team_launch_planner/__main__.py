@@ -1,11 +1,9 @@
-from .config import Config
+from .config import load_config
 from .server import create_server
 
 
 def main() -> None:
-    server = create_server(
-        Config(host="127.0.0.1", port=8000, database_path="team-launch.db")
-    )
+    server = create_server(load_config())
     try:
         server.serve_forever()
     except KeyboardInterrupt:
