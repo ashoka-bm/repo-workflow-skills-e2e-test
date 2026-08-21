@@ -58,6 +58,7 @@ LANDING_BATCH_FIELDS = {
     "stream",
     "tickets",
     "lands_after",
+    "starts_after",
     "conflict_surfaces",
     "safe_parallel_with",
     "must_not_overlap",
@@ -320,6 +321,7 @@ def validation_errors(plan: dict[str, Any]) -> list[str]:
 
     batches: dict[str, dict[str, Any]] = {}
     batch_landing_prerequisites: dict[str, list[str]] = {}
+    batch_start_prerequisites: dict[str, list[str]] = {}
     batch_parallel: dict[str, list[str]] = {}
     batch_serial: dict[str, list[str]] = {}
     membership: dict[str, list[str]] = {ticket_id: [] for ticket_id in tickets}
@@ -380,6 +382,13 @@ def validation_errors(plan: dict[str, Any]) -> list[str]:
             context=f"landing batch {batch_id} landing prerequisite",
             errors=errors,
         )
+        batch_start_prerequisites[batch_id] = relation_targets(
+            batch.get("starts_after", []),
+            target_field="batch",
+            explanation_field="reason",
+            context=f"landing batch {batch_id} start prerequisite",
+            errors=errors,
+        )
         batch_parallel[batch_id] = relation_targets(
             batch.get("safe_parallel_with"),
             target_field="batch",
@@ -396,6 +405,7 @@ def validation_errors(plan: dict[str, Any]) -> list[str]:
         )
         for relation_name, targets in (
             ("lands_after", batch_landing_prerequisites[batch_id]),
+            ("starts_after", batch_start_prerequisites[batch_id]),
             ("safe_parallel_with", batch_parallel[batch_id]),
             ("must_not_overlap", batch_serial[batch_id]),
         ):
@@ -438,6 +448,12 @@ def validation_errors(plan: dict[str, Any]) -> list[str]:
                 errors.append(
                     f"landing batch {batch_id} references unknown landing prerequisite {dependency}"
                 )
+        for dependency in batch_start_prerequisites.get(batch_id, []):
+            if dependency not in batch_landing_prerequisites.get(batch_id, []):
+                errors.append(
+                    f"landing batch {batch_id} start prerequisite {dependency} "
+                    "must also be a direct lands_after prerequisite"
+                )
         for other_id in batch_parallel.get(batch_id, []):
             other = batches.get(other_id)
             if other is None:
@@ -457,13 +473,6 @@ def validation_errors(plan: dict[str, Any]) -> list[str]:
                 errors.append(
                     f"landing batches {batch_id} and {other_id} claim safe parallelism "
                     "with overlapping conflict surfaces"
-                )
-            if other_id in batch_reachability.get(
-                batch_id, set()
-            ) or batch_id in batch_reachability.get(other_id, set()):
-                errors.append(
-                    f"dependent landing batches {batch_id} and {other_id} "
-                    "cannot be safe_parallel_with"
                 )
         for other_id in batch_serial.get(batch_id, []):
             if other_id not in batches:
@@ -490,13 +499,12 @@ def validation_errors(plan: dict[str, Any]) -> list[str]:
             serialized = second_id in batch_serial.get(
                 first_id, []
             ) or first_id in batch_serial.get(second_id, [])
-            classifications = sum((dependent, parallel, serialized))
-            if classifications == 0:
+            if not dependent and not parallel and not serialized:
                 errors.append(
                     f"landing plan must classify {first_id} and {second_id} as "
                     "dependent, safe_parallel_with, or must_not_overlap"
                 )
-            elif classifications > 1:
+            elif parallel and serialized:
                 errors.append(
                     f"landing plan gives contradictory classifications for "
                     f"{first_id} and {second_id}"
@@ -518,6 +526,25 @@ def validation_errors(plan: dict[str, Any]) -> list[str]:
                     f"ticket {ticket_id} cross-batch local prerequisite "
                     f"{prerequisite_id} requires {ticket_batch} to land after "
                     f"{prerequisite_batch}"
+                )
+            elif (
+                ticket_batch in batches
+                and prerequisite_batch != ticket_batch
+                and prerequisite_batch in batch_start_prerequisites.get(ticket_batch, [])
+            ):
+                errors.append(
+                    f"ticket {ticket_id} cannot use cross-batch checkpoint "
+                    f"{prerequisite_id} across starts_after {prerequisite_batch}"
+                )
+            elif (
+                ticket_batch in batches
+                and prerequisite_batch != ticket_batch
+                and prerequisite_batch not in batch_parallel.get(ticket_batch, [])
+            ):
+                errors.append(
+                    f"ticket {ticket_id} cross-batch local prerequisite "
+                    f"{prerequisite_id} requires {ticket_batch} and "
+                    f"{prerequisite_batch} to be safe_parallel_with"
                 )
     for batch_id, batch in batches.items():
         members = batch.get("tickets")

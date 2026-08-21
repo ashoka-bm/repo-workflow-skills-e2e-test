@@ -1,0 +1,24 @@
+merge_queue:
+  mode: serial
+  max_parallel_checks: 1
+  queue_controls_comment: false
+  reset_on_external_merge: always
+  queued_label: workflow:queued
+  dequeued_label: workflow:dequeued
+
+queue_rules:
+  - name: landing
+    batch_size: 1
+    queue_conditions:
+      - draft = false
+      - label != workflow:needs-human-review
+      - label = workflow:landing-validated
+      - check-success = landing-evidence
+      - check-success = landing-gate
+
+priority_rules:
+  - name: unlocks downstream work
+    conditions:
+      - label = workflow:unlocks-work
+    priority: high
+    allow_checks_interruption: false

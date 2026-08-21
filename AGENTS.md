@@ -10,6 +10,14 @@ Start here. This file identifies the repository, states the rules that always
 apply, and routes each task to only the context it needs. Replace every
 bracketed value during setup.
 
+## How work moves through this repository
+
+Shared plans and ownership live in GitHub. Implementation, testing, and review
+happen in a local worktree. A person or agent claims a landing batch by
+assigning it to themselves. Each active child ticket is likewise assigned to
+its slice worker. An independent reviewer checks the result. The pull request
+can merge only after its evidence, review, and required GitHub checks pass.
+
 ## Repository identity
 
 - **Project:** Team Launch Planner
@@ -30,23 +38,35 @@ larger domain model instead of copying a full glossary here.
 
 ### Workflow terms
 
-These terms have fixed meanings in every workflow document:
+These terms have fixed meanings in every workflow document. In short: a landing
+batch is one pull request, a slice is one independently testable change, the
+local frontier is the ready work inside one claimed batch, and the execution
+frontier is the ready work across all batches.
 
 | Term | Meaning |
 | --- | --- |
-| Work stream | Related tickets that one owner can advance independently of other streams. |
-| Landing batch | The tickets that land together in one pull request; the exclusive claim and ownership unit. |
-| Slice | The smallest end-to-end change that can be implemented, proved, reviewed, and committed on its own. |
-| Local prerequisite | A `local_after` relationship between slices in one batch, satisfied by a reviewed slice checkpoint rather than ticket closure. |
-| Landing prerequisite | A `lands_after` relationship between batches that requires the earlier batch to merge before the later batch can land. |
-| Slice checkpoint | A GitHub-visible record binding a completed slice to its reviewed commit and proof. |
-| Local frontier | The incomplete slices in a claimed batch whose local prerequisites have current slice checkpoints. |
-| Conflict surface | A shared resource — file, schema, migration, generated artifact, deployment slot — that two batches cannot safely change in parallel. |
-| Claim receipt | The coordinator's GitHub-visible record that a claim succeeded; assignment alone is never a claim. |
-| Queue sequence | The immutable, monotonically increasing number assigned when a locally complete draft enters the landing queue. |
-| Review finding | A reviewer-observed concern with a priority, evidence, relationship to the candidate, and durable review-time disposition. |
-| Deferred-findings register | The single GitHub issue created only when a parent plan first has a deferred finding that needs human triage; reused for the plan's lifetime. |
-| Review clean | Every applicable approved slice or landing-batch outcome was reviewed against the exact base-to-candidate diff, no unresolved P0/P1 blocker remains, every P2/P3 has a durable review-time disposition, required tests pass, and the exact candidate commit was reviewed. |
+| Work stream | A group of related tickets that one owner can move forward independently of other groups. |
+| Landing batch | The tickets merged together in one pull request. One owner claims the batch and is responsible for it. |
+| Slice | The smallest complete change that can be implemented, verified, reviewed, and committed on its own. |
+| Local prerequisite | A slice that must be completed and reviewed before another slice can begin. It is recorded as `local_after` and satisfied by a slice checkpoint, not by closing the ticket. A cross-batch prerequisite uses a stacked branch tied to the exact checkpoint. |
+| Landing prerequisite | A `lands_after` relationship: the earlier batch must merge before the later batch can merge. |
+| Start prerequisite | A `starts_after` relationship: the earlier batch must merge before anyone can claim or build the later batch. It must also be a direct landing prerequisite. |
+| Slice checkpoint | A record in GitHub that ties a completed slice to the exact commit, test evidence, and review. |
+| Local frontier | The unfinished slices that are ready to start because their local prerequisites have valid checkpoints. |
+| Execution frontier | The combined view of ready batches and ready slices across the plan. |
+| Conflict surface | A shared file, schema, migration, generated artifact, or deployment resource that two batches cannot safely change at the same time. |
+| Work unlocker | A landing batch whose merge allows at least one waiting `starts_after` batch to be claimed and built. |
+| Review finding | A concern found during review, including its priority, evidence, connection to the change, and durable review-time disposition. |
+| Deferred-findings register | One GitHub issue that holds findings awaiting human triage. It is created only when a parent plan first has a deferred finding that needs human triage, and it is reused for the life of that plan. |
+| Review clean | The required outcomes and exact base-to-candidate diff were reviewed, required tests pass, no P0/P1 blocker remains, every P2/P3 has a durable review-time disposition, and the exact candidate commit was reviewed. |
+
+The workflow also uses these role names consistently:
+
+- **Batch owner:** the person or agent assigned to and accountable for one landing batch.
+- **Worker:** the person or agent implementing a slice or batch.
+- **Reviewer:** an independent agent who reviews a specific commit.
+- **Workflow maintainer:** a person allowed to repair lifecycle evidence and failed workflow runs.
+- **GitHub actor:** the GitHub account that authenticates a workflow record.
 
 ## Authority and current evidence
 
@@ -55,15 +75,10 @@ These terms have fixed meanings in every workflow document:
 - Unresolved decisions or blockers: GitHub issues labeled `planning:decision`
 - Drift and disagreement routing: [`docs/agents/domain.md`](docs/agents/domain.md)
 - Operational procedures and recovery: [`COORDINATION.md`](COORDINATION.md) and [`GITHUB-WORKFLOW.md`](GITHUB-WORKFLOW.md)
-- Claim coordinator: GitHub user `ashoka-bm`
-- Claim request channel: Landing-batch issue comments using the records in [`COORDINATION.md`](COORDINATION.md)
-- Claim heartbeat channel: Landing pull-request comments using the heartbeat record in [`COORDINATION.md`](COORDINATION.md)
-- Stale-claim duration: 24 hours
-- Recovery-grace duration: 4 hours
+- Workflow maintainers: `ashoka-bm`
 - Base branch: `main`
 - Workflow Project: `https://github.com/users/ashoka-bm/projects/2`
-- Required status checks: `landing-gate`
-- Durable approval channel: GitHub issue comments approved with a `+1` reaction
+- Required status checks: `landing-evidence`, `landing-gate`
 
 Governing specifications describe intended behavior; code, tests,
 configuration, and runtime observations describe what exists now. Record any
@@ -145,6 +160,10 @@ installation.
 - Treat a landing batch as a landing boundary, not an execution wave. Start any
   slice on the local frontier; never wait for a prerequisite ticket to close
   when its required slice checkpoint is current.
+- Landing prerequisites block merging, not claiming or building. Start
+  prerequisites block both claiming and building until merge. Use the
+  execution frontier to take other ready batches and slices, including
+  checkpoint-bound stacked work across landing-only prerequisites.
 - Use the domain and architecture routes in `docs/agents/domain.md`; never
   create a conventional root file when a configured repository authority owns
   that information elsewhere.
@@ -153,29 +172,52 @@ installation.
 - Use `plan-new-work` only to resolve uncertainty before specification
   approval. Use `plan-implementation-tickets` only after the exact
   implementation specification is approved and has no open decisions.
-- Do not cross a human-approval stage gate when its exact approved artifact
-  cannot be verified.
+- Do not cross a human-approval stage gate without explicit approval of the
+  exact artifact in the active conversation. Ask again after any material
+  change or when work resumes in a new conversation without that approval.
 - Treat review as fail-closed: interruption, unavailability, uncertainty,
   timeout, or token exhaustion never counts as approval.
-- For a requested GitHub ticket, posting a claim request is allowed. An accepted
-  claim authorizes only these routine workflow records and guarded cleanup
-  steps; all other live or destructive external actions require explicit human
-  approval.
+- For a requested GitHub ticket, self-assignment is allowed after the checks in
+  `COORDINATION.md`. Assignment is the complete claim. Do not change an issue
+  already assigned to someone else. All other live or destructive external
+  actions require explicit human approval unless this workflow names them as a
+  routine implementation step.
 
-### Ticket lifecycle checkpoints
+### Batch lifecycle and ticket checkpoints
 
-- For fresh work, do not start implementation until GitHub shows an accepted
-  claim receipt, exactly one owner, and `Lifecycle: Building`. For a handoff or
-  recovery, verify the new receipt and owner while preserving the existing
-  delivery lifecycle.
-- Within a claimed batch, post a commit-bound slice checkpoint after local proof
-  and another-agent review, then immediately recompute the local frontier.
+- The Project `Lifecycle` field belongs only to landing-batch issues. Leave it
+  empty on plans and child tickets; use slice checkpoints to determine child
+  progress.
+- After each lifecycle trigger, wait for the trusted Lifecycle workflow to
+  verify the GitHub evidence, update the batch Project value, and re-read it.
+  Do not report the transition complete until GitHub shows the expected value.
+- For fresh work, assign the issue to yourself and re-read it. Start when GitHub
+  shows you as the only assignee. Assignment takes effect immediately;
+  `Lifecycle: Building` is a derived display value and is not an additional
+  claim gate.
+- Within a claimed batch, post a commit-bound slice checkpoint after local
+  verification and independent review, then immediately recompute the local
+  frontier.
+- The batch owner may delegate independent frontier slices to parallel workers
+  in isolated worktrees or branches. Each worker assigns the active child
+  ticket to themself; the batch owner remains accountable for integration and
+  is the only checkpoint publisher.
+- Preserve independent slice ancestry. Start a newly unlocked dependent from
+  its prerequisite checkpoint, not from a later batch head containing unrelated
+  completed slices.
+- After publishing a checkpoint, dispatch newly unlocked work before reviewing,
+  integrating, or checkpointing unrelated completed deliveries.
 - Keep the landing pull request draft while implementing. When the batch is
-  proved and review clean, post `local-complete` for the exact PR head, then
-  wait for `Lifecycle: Locally complete` before posting `queue-request`.
-- Do not manually make the pull request ready or merge it. The landing
-  controller selects the FIFO candidate, sets `Lifecycle: In PR`, and enables
-  auto-merge only after current promotion evidence exists.
+  verified and review clean, post `local-complete` for the exact PR head using
+  an authenticated GitHub actor. Wait for `Lifecycle: Locally complete`, then
+  complete the ready-for-review gate and run
+  `.workflow/scripts/queue_landing.py`; do not apply queue labels by hand.
+- Freeze the approved batch contract at `Lifecycle: Locally complete`. Any
+  material scope, dependency, membership, evidence, or PR-marker change
+  requires dequeue, invalidation, and a return to `Building` before editing.
+- After queue entry, wait for `Lifecycle: In PR`. Mergify owns current queue
+  state and merges only after the required landing gates pass. Do not manually
+  merge or enable GitHub auto-merge.
 - After GitHub merges, verify GitHub shows `Lifecycle: Landed` and that the
   landing batch and delivered tickets closed. Then run the authenticated
   post-merge cleanup in `LOCAL-WORK.md` to remove the exact remote branch,
@@ -184,12 +226,16 @@ installation.
 
 ## Completion language
 
-- **Locally complete:** the ticket meets its acceptance criteria, its focused
-  tests pass, its documentation and local records are current, it is review
-  clean under [`docs/agents/review-findings.md`](docs/agents/review-findings.md),
-  and a local commit preserves the result.
-- **Landing candidate:** a draft pull request for one coherent landing batch.
-- **Active landing candidate:** the one non-draft pull request currently selected to land next.
+- **Complete slice:** the child ticket's slice meets its acceptance criteria,
+  its focused tests pass, its documentation and local records are current, it
+  is review clean, and a slice checkpoint preserves the result.
+- **Locally complete batch:** every required slice checkpoint is current, the
+  full batch passes its local gates, and the exact candidate commit is review
+  clean.
+- **Landing candidate:** the pull request for one coherent landing batch. It is
+  a draft landing candidate while the batch is being built.
+- **Queued landing candidate:** a non-draft landing candidate accepted into the
+  Mergify queue. GitHub shows this as `Lifecycle: In PR`.
 - **Landed:** the landing candidate passed required GitHub checks and merged
   into the base branch.
 
@@ -214,7 +260,7 @@ Describe only the important top-level paths an agent must distinguish.
 | `src/` | Application behavior; it does not own workflow policy or planning state |
 | `tests/` | Automated proof for application behavior |
 | `docs/` | Durable domain, architecture, and operational documentation |
-| `.scratch/` | Commit-bound implementation, test, and review evidence |
+| `.local-work/` | Commit-bound implementation, test, and review evidence |
 | `.tmp/` | Disposable investigations and generated intermediates |
 
 # Coding preferences

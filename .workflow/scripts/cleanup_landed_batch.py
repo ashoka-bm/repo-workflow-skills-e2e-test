@@ -174,7 +174,7 @@ def require_merged_pr(
         or head_repository.get("full_name") != github_repository
     ):
         raise CleanupError(
-            "local branch does not match the merged pull request head; preserve it"
+            "local branch does not match the merged pull request's commit; preserve it"
         )
 
 

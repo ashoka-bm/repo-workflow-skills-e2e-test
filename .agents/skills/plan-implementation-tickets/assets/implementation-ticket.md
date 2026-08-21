@@ -13,7 +13,7 @@
 - Parent plan: <issue link>
 - Work stream: <stream name or identifier>
 - Landing batch: <issue link>
-- Local after: <earlier ticket in this batch plus why its reviewed checkpoint is required, or none>
+- Local after: <earlier ticket in this or another landing batch plus why its reviewed checkpoint is required, or none; cross-batch edges require matching landing order and safe parallelism>
 
 ## Starting context
 

@@ -29,8 +29,8 @@ Use `planning:research` for evidence gathering, `planning:prototype` for a
 disposable uncertainty-reducing experiment, `planning:decision` for a choice
 that requires an authority, and `planning:task` for planning-stage synthesis or
 documentation. Use native issue dependencies for blockers. Follow the
-planning-issue claim protocol in `COORDINATION.md`; assignment alone is not a
-claim.
+planning-issue assignment protocol in `COORDINATION.md`; assigning an open,
+unassigned issue to yourself is the complete claim.
 
 Keep the map as an index: destination, decisions with links, not-yet-specified
 fog, and out-of-scope work. Keep each detailed answer in its decision issue so
@@ -38,8 +38,8 @@ one decision has one authority.
 
 ## Resolve the frontier
 
-Work open, unassigned, unblocked decision issues. Obtain and re-read the
-GitHub-visible claim receipt before starting. Record the answer, close the
+Work open, unassigned, unblocked decision issues. Assign the issue to yourself
+and re-read GitHub to confirm you are its only assignee before starting. Record the answer, close the
 issue, update the map index, and add or invalidate later questions revealed by
 the answer. More than one decision may be resolved in a session when each has
 its own claim and remains independently attributable and reviewed.

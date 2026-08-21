@@ -1,0 +1,10 @@
+{
+  "schema_version": 2,
+  "repository": "ashoka-bm/repo-workflow-skills-e2e-test",
+  "base_branch": "main",
+  "project_id": "PVT_kwHOD4WqWs4BhCZS",
+  "project_fields": {
+    "lifecycle": "Lifecycle"
+  },
+  "authorized_maintainers": ["ashoka-bm"]
+}

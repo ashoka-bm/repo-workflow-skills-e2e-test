@@ -8,6 +8,8 @@ class WorkflowSetupTest(unittest.TestCase):
             Path("WORKFLOW.md"),
             Path(".workflow/github-setup-contract.json"),
             Path(".github/workflows/landing-ci.yml"),
+            Path(".github/workflows/lifecycle.yml"),
+            Path(".mergify.yml"),
         )
 
         for path in required_paths:
@@ -16,7 +18,11 @@ class WorkflowSetupTest(unittest.TestCase):
 
         orientation = Path("AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("https://github.com/users/ashoka-bm/projects/2", orientation)
-        self.assertIn("Required status checks: `landing-gate`", orientation)
+        self.assertIn(
+            "Required status checks: `landing-evidence`, `landing-gate`",
+            orientation,
+        )
+        self.assertIn("Assignment is the complete claim", orientation)
 
 
 if __name__ == "__main__":
