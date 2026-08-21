@@ -200,9 +200,9 @@ Do not describe locally complete work as landed.
 List only commands that genuinely apply:
 
 - Environment setup: None; the planned service uses the Python 3 standard library
-- Focused tests: `python3 -m unittest discover -s tests -p 'test_launches.py'`
-- Full local test gate: `python3 -m unittest discover -s tests`
-- Build or type-check: `python3 -m compileall src tests`
+- Focused tests: `python3 -m unittest discover -p 'test_launches.py'`
+- Full local test gate: `python3 -m unittest discover`
+- Build or type-check: `python3 -m compileall .`
 - Lint or static checks: None configured
 
 ## Repository roots

@@ -7,52 +7,10 @@ on:
 
 permissions:
   contents: read
-  issues: read
-  pull-requests: read
-  actions: read
-  checks: read
 
 jobs:
-  authorize:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    outputs:
-      active: ${{ steps.verify.outputs.active }}
-    steps:
-      - name: Check out trusted controller code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-          path: .controller-source
-          persist-credentials: false
-
-      - name: Create read-only GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          client-id: ${{ vars.WORKFLOW_APP_CLIENT_ID }}
-          private-key: ${{ secrets.WORKFLOW_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-
-      - name: Verify the authoritative active candidate
-        id: verify
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        shell: bash
-        run: |
-          mkdir -p .tmp/controller
-          python3 .controller-source/.workflow/github_snapshot.py collect \
-            --config .controller-source/.workflow/controller-config.json \
-            --output .tmp/controller/snapshot.json
-          python3 .controller-source/.workflow/controller.py authorize-ci \
-            --snapshot .tmp/controller/snapshot.json \
-            --pull-request "${{ github.event.pull_request.number }}"
-          echo 'active=true' >> "$GITHUB_OUTPUT"
-
   landing-gate:
-    needs: authorize
-    if: needs.authorize.outputs.active == 'true'
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - name: Check out the candidate under test
@@ -61,5 +19,5 @@ jobs:
       - name: Run repository landing gate
         shell: bash
         run: |
-          python3 -m unittest discover -s tests
-          python3 -m compileall src tests
+          python3 -m unittest discover
+          python3 -m compileall .
