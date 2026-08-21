@@ -8,7 +8,7 @@ Create the snapshot from observed GitHub state, not the desired contract.
     "id": "PVT_example",
     "url": "https://github.com/orgs/example/projects/1"
   },
-  "labels": ["planning:map", "workflow:plan", "workflow:needs-human-review"],
+  "labels": ["planning:map", "PLAN", "workflow:needs-human-review"],
   "project_fields": {
     "Work stream": {"type": "text"},
     "Queue sequence": {"type": "number"},

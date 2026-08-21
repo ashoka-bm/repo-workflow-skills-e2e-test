@@ -183,7 +183,7 @@ remain unassigned. Inside a claimed batch, derive the local frontier from
 `local_after` and current slice checkpoints; do not add a child-ticket readiness
 label or wait for child-ticket closure.
 
-Use `workflow:plan`, `workflow:batch`, and `workflow:ticket` only for artifact
+Use `PLAN`, `BATCH`, and `TICKET` only for artifact
 type. Keep stream and lifecycle in GitHub Project fields, batch membership in
 the native hierarchy, landing prerequisites in native dependencies, and
 ownership on the batch assignee. Apply only the controlled `surface:*` labels
